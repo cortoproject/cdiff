@@ -347,7 +347,7 @@ cdiff_file cdiff_file_open (char* filename) {
 
     /* Store current working directory in case the application using this
      * function changes the cwd before closing the file. */
-    corto_asprintf(&result->name, "%s/%s", corto_cwd(), filename);
+    result->name = corto_asprintf("%s/%s", corto_cwd(), filename);
 
     result->elements = NULL;
     result->legacyElements = NULL;
@@ -545,7 +545,7 @@ void cdiff_file_elemBegin(cdiff_file file, char *fmt, ...) {
     if (fmt) {
         va_list args;
         va_start(args, fmt);
-        corto_vasprintf(&id, fmt, args);
+        id = corto_vasprintf(fmt, args);
         va_end(args);
 
         el = cdiff_file_elemFind(file->elements, id);
