@@ -3,11 +3,11 @@
 
 /* Optimistically parse C / C++ sourcefiles, extract function headers & bodies
  * so they can be replaced by updated definitions & new definitions can be added
- * without losing original content. */ 
+ * without losing original content. */
 
 static void cdiff_addElem(
-    corto_ll elements, 
-    char *id, 
+    corto_ll elements,
+    char *id,
     char *header,
     char *body)
 {
@@ -24,7 +24,7 @@ static void cdiff_addElem(
         elem->header = NULL;
         elem->body = body;
     }
-    
+
     corto_ll_append(elements, elem);
 }
 
@@ -152,10 +152,10 @@ static char* cdiff_scanUntil(char *src, corto_buffer *buffer, char match, char**
 }
 
 static char *cdiff_parseFunction(
-    char *src, 
+    char *src,
     char *id,
-    corto_buffer *header, 
-    corto_buffer *body) 
+    corto_buffer *header,
+    corto_buffer *body)
 {
     char *t_start;
 
@@ -197,15 +197,15 @@ stop:
 }
 
 static char* cdiff_parseElem(
-    char *src, 
-    char *id, 
-    corto_buffer *header, 
-    corto_buffer *body) 
+    char *src,
+    char *id,
+    corto_buffer *header,
+    corto_buffer *body)
 {
     char ch, *ptr = src;
     id[0] = '\0';
 
-    if (isalpha(src[0])) {        
+    if (isalpha(src[0])) {
         /* Potential function */
         ptr = cdiff_parseFunction(src, id, header, body);
 
@@ -277,7 +277,7 @@ static corto_ll cdiff_parseLegacy(char *code) {
                 endptr += 3;
 
                 if (strlen(ptr) >= sizeof(corto_id)) {
-                    corto_seterr(
+                    corto_throw(
                         "%s: identifier of code-snippet exceeds %d characters", sizeof(corto_id));
                     goto error;
                 }
@@ -306,7 +306,7 @@ static corto_ll cdiff_parseLegacy(char *code) {
                     src = corto_strdup(ptr);
 
                     if(strstr(src, "$begin")) {
-                        corto_seterr("code-snippet '%s' contains nested $begin (did you forget an $end?)",
+                        corto_throw("code-snippet '%s' contains nested $begin (did you forget an $end?)",
                             identifier);
                         corto_dealloc(src);
                         goto error;
@@ -337,8 +337,6 @@ error:
     if (result) {
         corto_ll_free(result);
     }
-
-    printf("error!\n");
     return NULL;
 }
 
@@ -358,7 +356,7 @@ cdiff_file cdiff_file_open (char* filename) {
     result->newLine = true;
     result->cur = NULL;
 
-    char *source = corto_fileLoad(result->name);
+    char *source = corto_file_load(result->name);
     if (source) {
         result->isNew = false;
 
@@ -386,7 +384,7 @@ cdiff_file cdiff_file_open (char* filename) {
         free(source);
 
     } else {
-        corto_lasterr(); /* silence warning */
+        corto_catch();
         result->isNew = true;
     }
 
@@ -399,20 +397,26 @@ error:
 }
 
 static bool cdiff_file_writeElement(FILE *f, char *element, bool prevIsNl) {
+    corto_assert(f != NULL, "NULL file passed to cdiff_file_writeElem");
+
     /* Filter out newlines */
+    int len = strlen(element);
+
     if (!prevIsNl || element[0] != '\n' || element[1] != '\0') {
-        fwrite(element, strlen(element), 1, f);
+        fwrite(element, len, 1, f);
         if (element[0] == '\n' && element[1] == '\0') {
             prevIsNl = true;
         }
     }
 
-    char last = element[strlen(element) - 2];
+    if (len >= 2) {
+        char last = element[len - 2];
 
-    /* Auto-insert newline after } */
-    if (last == '}') {
-        fwrite("\n", 1, 1, f);
-        prevIsNl = true;
+        /* Auto-insert newline after } */
+        if (last == '}') {
+            fwrite("\n", 1, 1, f);
+            prevIsNl = true;
+        }
     }
 
     free(element);
@@ -421,6 +425,8 @@ static bool cdiff_file_writeElement(FILE *f, char *element, bool prevIsNl) {
 }
 
 static void cdiff_file_writeElements(FILE *f, corto_ll elements) {
+    corto_assert(f != NULL, "NULL file passed to cdiff_file_writeElements");
+
     corto_iter it = corto_ll_iter(elements);
     bool prevIsNl = false;
 
@@ -447,6 +453,10 @@ int16_t cdiff_file_close (cdiff_file file) {
     if (file->isChanged) {
         /* Open file for writing */
         FILE *f = fopen(file->name, "w");
+        if (!f) {
+            corto_throw("cannot open file '%s'", file->name);
+            goto error;
+        }
 
         /* Write & cleanup elements */
         cdiff_file_writeElements(f, file->elements);
@@ -462,6 +472,8 @@ int16_t cdiff_file_close (cdiff_file file) {
     }
 
     return 0;
+error:
+    return -1;
 }
 
 static cdiff_elem* cdiff_file_elemFind(corto_ll elements, char *id) {
@@ -631,9 +643,9 @@ void cdiff_file_bodyEnd(cdiff_file file) {
 }
 
 void cdiff_file_write(
-    cdiff_file file, 
-    char *fmt, 
-    ...) 
+    cdiff_file file,
+    char *fmt,
+    ...)
 {
     corto_assert(file != NULL, "NULL specified for file");
 
