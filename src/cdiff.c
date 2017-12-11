@@ -151,6 +151,53 @@ static char* cdiff_scanUntil(char *src, corto_buffer *buffer, char match, char**
     return ptr;
 }
 
+static char *cdiff_skipExtern(
+    char *ptr,
+    corto_buffer *header,
+    char **t_start)
+{
+    /* Test if last parsed token was 'extern' */
+    if ((ptr - *t_start) == strlen("extern") &&
+        !memcmp(*t_start, "extern", ptr - *t_start))
+    {
+        /* If extern is found, it should be part of the header */
+        char ch;
+        for (; (ch = *ptr) && (ch != '"') && (ch != '\n'); ptr ++);
+        if (ch == '"') {
+            ptr ++;
+
+            /* Language identifier found. Scan for next '"'. Expect on the same
+             * line. */
+            for (; (ch = *ptr) && (ch != '"') && (ch != '\n'); ptr ++);
+            if (ch == '"') {
+                ptr ++;
+
+                /* End of language identifier found. Search until next non-
+                 * whitespace character is found (may include newline) */
+                for (; (ch = *ptr) && (isspace(ch)); ptr ++);
+
+                /* Now parse type identifier, so the result points to where
+                 * the function identifier starts */
+                ptr = cdiff_scanId(ptr, header, t_start);
+                if (!t_start) goto stop;
+                return ptr;
+            } else {
+                corto_throw("missing language identifier for 'extern'");
+                goto stop;
+            }
+        } else {
+            goto stop;
+        }
+
+    } else {
+        return ptr;
+    }
+stop:
+    *t_start = NULL;
+    return ptr;
+}
+
+
 static char *cdiff_parseFunction(
     char *src,
     char *id,
@@ -161,6 +208,10 @@ static char *cdiff_parseFunction(
 
     /* Parse type identifier */
     char *ptr = cdiff_scanId(src, header, &t_start);
+    if (!t_start) goto stop;
+
+    /* If token is 'extern', this is an extern possibly preceding a function */
+    ptr = cdiff_skipExtern(ptr, header, &t_start);
     if (!t_start) goto stop;
 
     /* Parse identifier */
