@@ -660,7 +660,7 @@ void cdiff_file_headerEnd(cdiff_file file) {
     if (!file->cur->header) {
         file->cur->header = header;
     } else if (strcmp(header, file->cur->header)) {
-        corto_ptr_setstr(&file->cur->header, header);
+        corto_set_str(&file->cur->header, header);
         file->isChanged = TRUE;
     }
 
