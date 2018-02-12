@@ -1,11 +1,12 @@
 
 #include <corto/cdiff/cdiff.h>
 
-/* Optimistically parse C / C++ sourcefiles, extract function headers & bodies
+/* Optimistic parsing of C / C++ sourcefiles, extract function headers & bodies
  * so they can be replaced by updated definitions & new definitions can be added
  * without losing original content. */
 
-static void cdiff_addElem(
+static
+void cdiff_addElem(
     corto_ll elements,
     char *id,
     char *header,
@@ -24,11 +25,13 @@ static void cdiff_addElem(
         elem->header = NULL;
         elem->body = body;
     }
+    elem->isNew = false;
 
     corto_ll_append(elements, elem);
 }
 
-static char* cdiff_skipMultiLineComment(char *src) {
+static
+char* cdiff_skipMultiLineComment(char *src) {
     char *ptr, ch;
     for (ptr = src; (ch = *ptr); ptr ++) {
         if (ch == '*') {
@@ -42,7 +45,8 @@ static char* cdiff_skipMultiLineComment(char *src) {
     return ptr;
 }
 
-static char* cdiff_skipLineComment(char *src) {
+static
+char* cdiff_skipLineComment(char *src) {
     char *ptr, ch;
     for (ptr = src; (ch = *ptr); ptr ++) {
         if (ch == '\n') {
@@ -54,9 +58,10 @@ static char* cdiff_skipLineComment(char *src) {
     return ptr;
 }
 
-static char* cdiff_skipString(char *src) {
+static
+char* cdiff_skipString(char *src, char delim) {
     char *ptr, ch;
-    for (ptr = src; (ch = *ptr) && (ch != '"'); ptr ++) {
+    for (ptr = src; (ch = *ptr) && (ch != delim); ptr ++) {
         if (ch == '\\') {
             ptr ++;
         }
@@ -65,16 +70,30 @@ static char* cdiff_skipString(char *src) {
     return ptr;
 }
 
-static char* cdiff_next(char *src, char match) {
+static
+char* cdiff_next(char *src, char match) {
     char *ptr, ch;
+    int nesting = 0;
 
     for (ptr = src; ptr && (ch = *ptr); ptr ++) {
+        if (match == '}' && ch == '{') {
+            nesting ++;
+        }
+        if (match == ')' && ch == '(') {
+            nesting ++;
+        }
         if (ch == match) {
-            break;
+            if (nesting) {
+                nesting --;
+            } else {
+                break;
+            }
         } else if (isspace(ch)) {
             /* Keep scanning */
         } else if (ch == '"') {
-            ptr = cdiff_skipString(&ptr[1]);
+            ptr = cdiff_skipString(&ptr[1], '"');
+        } else if (ch == '\'') {
+            ptr = cdiff_skipString(&ptr[1], '\'');
         } else if (ch == '/') {
             /* Comment? */
             if (ptr[1] == '*') {
@@ -82,7 +101,7 @@ static char* cdiff_next(char *src, char match) {
             } else if (ptr[1] == '/') {
                 ptr = cdiff_skipLineComment(&ptr[2]);
             }
-        } else {
+        } else if (!nesting) {
             break;
         }
     }
@@ -90,7 +109,8 @@ static char* cdiff_next(char *src, char match) {
     return ptr;
 }
 
-static char* cdiff_scanId(char *src, corto_buffer *buffer, char** t_start) {
+static
+char* cdiff_scanId(char *src, corto_buffer *buffer, char** t_start) {
     char ch, *ptr = cdiff_next(src, 0);
 
     *t_start = NULL;
@@ -115,7 +135,8 @@ static char* cdiff_scanId(char *src, corto_buffer *buffer, char** t_start) {
     return ptr;
 }
 
-static char* cdiff_scanExpect(char *src, corto_buffer *buffer, char match, char** t_start) {
+static
+char* cdiff_scanExpect(char *src, corto_buffer *buffer, char match, char** t_start) {
     char *ptr = cdiff_next(src, match);
 
     *t_start = NULL;
@@ -132,7 +153,8 @@ static char* cdiff_scanExpect(char *src, corto_buffer *buffer, char match, char*
     return ptr;
 }
 
-static char* cdiff_scanUntil(char *src, corto_buffer *buffer, char match, char** t_start) {
+static
+char* cdiff_scanUntil(char *src, corto_buffer *buffer, char match, char** t_start) {
     char ch, *ptr;
 
     for (ptr = src; (ch = *ptr) && (ch != match); ptr = cdiff_next(ptr + 1, match));
@@ -151,7 +173,8 @@ static char* cdiff_scanUntil(char *src, corto_buffer *buffer, char match, char**
     return ptr;
 }
 
-static char *cdiff_skipExtern(
+static
+char *cdiff_skipExtern(
     char *ptr,
     corto_buffer *header,
     char **t_start)
@@ -198,7 +221,8 @@ stop:
 }
 
 
-static char *cdiff_parseFunction(
+static
+char *cdiff_parseFunction(
     char *src,
     char *id,
     corto_buffer *header,
@@ -247,7 +271,8 @@ stop:
     return src;
 }
 
-static char* cdiff_parseElem(
+static
+char* cdiff_parseElem(
     char *src,
     char *id,
     corto_buffer *header,
@@ -273,7 +298,8 @@ static char* cdiff_parseElem(
     return ch ? ptr + 1 : ptr;
 }
 
-static corto_ll cdiff_parse(char *src) {
+static
+corto_ll cdiff_parse(char *src) {
     corto_ll elements = corto_ll_new();
     corto_id id;
     char *ptr = src;
@@ -295,7 +321,8 @@ static corto_ll cdiff_parse(char *src) {
 }
 
 /* Find existing parts in the code that must not be overwritten. */
-static corto_ll cdiff_parseLegacy(char *code) {
+static
+corto_ll cdiff_parseLegacy(char *code) {
     char *ptr = NULL;
     corto_ll result = corto_ll_new();
 
@@ -368,6 +395,7 @@ static corto_ll cdiff_parseLegacy(char *code) {
                     el->id = corto_strdup(identifier);
                     el->header = NULL;
                     el->body = src;
+                    el->isNew = false;
                     corto_ll_append(result, el);
 
                     ptr = endptr + 1;
@@ -447,49 +475,36 @@ error:
     return NULL;
 }
 
-static bool cdiff_file_writeElement(FILE *f, char *element, bool prevIsNl) {
+static
+void cdiff_file_writeElement(FILE *f, char *element) {
     corto_assert(f != NULL, "NULL file passed to cdiff_file_writeElem");
 
-    /* Filter out newlines */
-    int len = strlen(element);
-
-    if (!prevIsNl || element[0] != '\n' || element[1] != '\0') {
-        fwrite(element, len, 1, f);
-        if (element[0] == '\n' && element[1] == '\0') {
-            prevIsNl = true;
-        }
-    }
-
-    if (len >= 2) {
-        char last = element[len - 2];
-
-        /* Auto-insert newline after } */
-        if (last == '}') {
-            fwrite("\n", 1, 1, f);
-            prevIsNl = true;
-        }
-    }
-
+    fprintf(f, "%s", element);
     free(element);
-
-    return prevIsNl;
 }
 
-static void cdiff_file_writeElements(FILE *f, corto_ll elements) {
+static
+void cdiff_file_writeElements(FILE *f, corto_ll elements) {
     corto_assert(f != NULL, "NULL file passed to cdiff_file_writeElements");
 
     corto_iter it = corto_ll_iter(elements);
-    bool prevIsNl = false;
 
     while (corto_iter_hasNext(&it)) {
         cdiff_elem *el = corto_iter_next(&it);
 
         if (el->header) {
-            prevIsNl = cdiff_file_writeElement(f, el->header, prevIsNl);
+            if (el->isNew && el->kind == CDIFF_FUNCTION) {
+                /* If this is a new function, insert a newline. This allows the
+                 * code that inserts the new function to not worry about
+                 * newlines, and also prevents easy-to-make bugs where every
+                 * generation adds a newline. */
+                fprintf(f, "\n");
+            }
+            cdiff_file_writeElement(f, el->header);
         }
 
         if (el->body) {
-            prevIsNl = cdiff_file_writeElement(f, el->body, prevIsNl);
+            cdiff_file_writeElement(f, el->body);
         }
 
         if (el->id) free(el->id);
@@ -527,7 +542,8 @@ error:
     return -1;
 }
 
-static cdiff_elem* cdiff_file_elemFind(corto_ll elements, char *id) {
+static
+cdiff_elem* cdiff_file_elemFind(corto_ll elements, char *id) {
     corto_iter it = corto_ll_iter(elements);
     cdiff_elem *el = NULL;
 
@@ -585,8 +601,12 @@ static cdiff_elem* cdiff_file_elemFind(corto_ll elements, char *id) {
                         break;
                     }
                 }
-            } else if (el->id && !strcmp(el->id, id)) {
-                break;
+            } else if (el->id) {
+                if (!strcmp(el->id, id)) {
+                    break;
+                } else if (strstr(el->id, "Main") && !strcmp(id, "cortomain")) {
+                    break;
+                }
             }
         }
         el = NULL;
@@ -623,6 +643,7 @@ void cdiff_file_elemBegin(cdiff_file file, char *fmt, ...) {
         el->header = NULL;
         el->body = NULL;
         el->kind = id ? CDIFF_FUNCTION : CDIFF_TEXT;
+        el->isNew = true;
         file->isChanged = true;
 
         if (!file->elements) {

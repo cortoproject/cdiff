@@ -19,6 +19,7 @@ typedef struct cdiff_elem {
     char *id;
     char *header;
     char *body;
+    bool isNew;
 } cdiff_elem;
 
 typedef struct cdiff_file_s *cdiff_file;
@@ -65,4 +66,3 @@ int16_t cdiff_file_close(cdiff_file file);
 #endif
 
 #endif /* CORTO_CDIFF_H */
-
