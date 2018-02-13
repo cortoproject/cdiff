@@ -31,7 +31,9 @@ void cdiff_addElem(
 }
 
 static
-char* cdiff_skipMultiLineComment(char *src) {
+char* cdiff_skipMultiLineComment(
+    char *src)
+{
     char *ptr, ch;
     for (ptr = src; (ch = *ptr); ptr ++) {
         if (ch == '*') {
@@ -46,7 +48,9 @@ char* cdiff_skipMultiLineComment(char *src) {
 }
 
 static
-char* cdiff_skipLineComment(char *src) {
+char* cdiff_skipLineComment(
+    char *src)
+{
     char *ptr, ch;
     for (ptr = src; (ch = *ptr); ptr ++) {
         if (ch == '\n') {
@@ -59,7 +63,10 @@ char* cdiff_skipLineComment(char *src) {
 }
 
 static
-char* cdiff_skipString(char *src, char delim) {
+char* cdiff_skipString(
+    char *src,
+    char delim)
+{
     char *ptr, ch;
     for (ptr = src; (ch = *ptr) && (ch != delim); ptr ++) {
         if (ch == '\\') {
@@ -71,7 +78,10 @@ char* cdiff_skipString(char *src, char delim) {
 }
 
 static
-char* cdiff_next(char *src, char match) {
+char* cdiff_next(
+    char *src,
+    char match)
+{
     char *ptr, ch;
     int nesting = 0;
 
@@ -110,7 +120,11 @@ char* cdiff_next(char *src, char match) {
 }
 
 static
-char* cdiff_scanId(char *src, corto_buffer *buffer, char** t_start) {
+char* cdiff_scanId(
+    char *src,
+    corto_buffer *buffer,
+    char** t_start)
+{
     char ch, *ptr = cdiff_next(src, 0);
 
     *t_start = NULL;
@@ -136,7 +150,12 @@ char* cdiff_scanId(char *src, corto_buffer *buffer, char** t_start) {
 }
 
 static
-char* cdiff_scanExpect(char *src, corto_buffer *buffer, char match, char** t_start) {
+char* cdiff_scanExpect(
+    char *src,
+    corto_buffer *buffer,
+    char match,
+    char** t_start)
+{
     char *ptr = cdiff_next(src, match);
 
     *t_start = NULL;
@@ -154,7 +173,12 @@ char* cdiff_scanExpect(char *src, corto_buffer *buffer, char match, char** t_sta
 }
 
 static
-char* cdiff_scanUntil(char *src, corto_buffer *buffer, char match, char** t_start) {
+char* cdiff_scanUntil(
+    char *src,
+    corto_buffer *buffer,
+    char match,
+    char** t_start)
+{
     char ch, *ptr;
 
     for (ptr = src; (ch = *ptr) && (ch != match); ptr = cdiff_next(ptr + 1, match));
@@ -419,7 +443,9 @@ error:
     return NULL;
 }
 
-cdiff_file cdiff_file_open (char* filename) {
+cdiff_file cdiff_file_open (
+    char* filename)
+{
     cdiff_file result = malloc(sizeof(struct cdiff_file_s));
 
     /* Store current working directory in case the application using this
@@ -476,7 +502,10 @@ error:
 }
 
 static
-void cdiff_file_writeElement(FILE *f, char *element) {
+void cdiff_file_writeElement(
+    FILE *f,
+    char *element)
+{
     corto_assert(f != NULL, "NULL file passed to cdiff_file_writeElem");
 
     fprintf(f, "%s", element);
@@ -484,7 +513,10 @@ void cdiff_file_writeElement(FILE *f, char *element) {
 }
 
 static
-void cdiff_file_writeElements(FILE *f, corto_ll elements) {
+void cdiff_file_writeElements(
+    FILE *f,
+    corto_ll elements)
+{
     corto_assert(f != NULL, "NULL file passed to cdiff_file_writeElements");
 
     corto_iter it = corto_ll_iter(elements);
@@ -514,7 +546,9 @@ void cdiff_file_writeElements(FILE *f, corto_ll elements) {
     corto_ll_free(elements);
 }
 
-int16_t cdiff_file_close (cdiff_file file) {
+int16_t cdiff_file_close (
+    cdiff_file file)
+{
     /* If file didn't change, no need to overwrite file (speeds up building) */
     if (file->isChanged) {
         /* Open file for writing */
@@ -543,7 +577,10 @@ error:
 }
 
 static
-cdiff_elem* cdiff_file_elemFind(corto_ll elements, char *id) {
+cdiff_elem* cdiff_file_elemFind(
+    corto_ll elements,
+    char *id)
+{
     corto_iter it = corto_ll_iter(elements);
     cdiff_elem *el = NULL;
 
@@ -615,7 +652,10 @@ cdiff_elem* cdiff_file_elemFind(corto_ll elements, char *id) {
     return el;
 }
 
-void cdiff_file_elemBegin(cdiff_file file, char *fmt, ...) {
+void cdiff_file_elemBegin(
+    cdiff_file file,
+    char *fmt, ...)
+{
     corto_assert(file != NULL, "NULL specified for file");
 
     if (!file->elements) {
@@ -658,13 +698,17 @@ void cdiff_file_elemBegin(cdiff_file file, char *fmt, ...) {
     file->writeTo = 0;
 }
 
-void cdiff_file_elemEnd(cdiff_file file) {
+void cdiff_file_elemEnd(
+    cdiff_file file)
+{
     corto_assert(file != NULL, "NULL specified for file");
     corto_assert(file->writeTo == 0, "finish header or body before closing element");
     file->cur = NULL;
 }
 
-void cdiff_file_headerBegin(cdiff_file file) {
+void cdiff_file_headerBegin(
+    cdiff_file file)
+{
     corto_assert(file != NULL, "NULL specified for file");
     corto_assert(file->cur != NULL, "select element before starting header");
     corto_assert(file->writeTo != 2, "end body before start writing to header");
@@ -673,7 +717,9 @@ void cdiff_file_headerBegin(cdiff_file file) {
     file->writeBuffer = CORTO_BUFFER_INIT;
 }
 
-void cdiff_file_headerEnd(cdiff_file file) {
+void cdiff_file_headerEnd(
+    cdiff_file file)
+{
     corto_assert(file != NULL, "NULL specified for file");
     corto_assert(file->writeTo == 1, "not writing to header");
 
@@ -688,7 +734,9 @@ void cdiff_file_headerEnd(cdiff_file file) {
     file->writeTo = 0;
 }
 
-int16_t cdiff_file_bodyBegin(cdiff_file file) {
+int16_t cdiff_file_bodyBegin(
+    cdiff_file file)
+{
     corto_assert(file != NULL, "NULL specified for file");
     corto_assert(file->cur != NULL, "select element before starting body");
     corto_assert(file->writeTo != 1, "end header before start writing to body");
@@ -704,7 +752,9 @@ int16_t cdiff_file_bodyBegin(cdiff_file file) {
     return 0;
 }
 
-void cdiff_file_bodyEnd(cdiff_file file) {
+void cdiff_file_bodyEnd(
+    cdiff_file file)
+{
     corto_assert(file != NULL, "NULL specified for file");
     corto_assert(file->writeTo == 2, "not writing to body");
 
@@ -757,12 +807,16 @@ void cdiff_file_writeBuffer(
     free(str);
 }
 
-void cdiff_file_indent(cdiff_file file) {
+void cdiff_file_indent(
+    cdiff_file file)
+{
     corto_assert(file != NULL, "NULL specified for file");
     file->indent ++;
 }
 
-void cdiff_file_dedent(cdiff_file file) {
+void cdiff_file_dedent(
+    cdiff_file file)
+{
     corto_assert(file != NULL, "NULL specified for file");
     corto_assert(file->indent != 0, "too many dedents");
     file->indent --;
