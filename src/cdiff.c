@@ -54,7 +54,6 @@ char* cdiff_skipLineComment(
     char *ptr, ch;
     for (ptr = src; (ch = *ptr); ptr ++) {
         if (ch == '\n') {
-            ptr ++;
             break;
         }
     }
