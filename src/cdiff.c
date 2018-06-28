@@ -642,6 +642,10 @@ cdiff_elem* cdiff_file_elemFind(
                     break;
                 } else if (strstr(el->id, "Main") && !strcmp(id, "cortomain")) {
                     break;
+                } else if (!strcmp(el->id, "main") && !strcmp(id, "cortomain")) {
+                    break;
+                } else if (!strcmp(el->id, "cortomain") && !strcmp(id, "main")) {
+                    break;
                 }
             }
         }
