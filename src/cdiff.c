@@ -1,5 +1,5 @@
 
-#include <corto/cdiff/cdiff.h>
+#include <corto/util/cdiff/cdiff.h>
 
 /* Optimistic parsing of C / C++ sourcefiles, extract function headers & bodies
  * so they can be replaced by updated definitions & new definitions can be added

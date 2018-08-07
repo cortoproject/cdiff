@@ -1,13 +1,13 @@
 {
-    "id": "corto/cdiff",
+    "id": "corto.util.cdiff",
     "type": "package",
     "value": {
         "author": "Sander Mertens",
         "organization": "cortoproject",
         "repository": "https://github.com/cortoproject/cdiff",
-        "license": "MIT",        
+        "license": "MIT",
         "description": "Perform in-code replacements of function implementations",
         "managed": false,
-        "use": ["corto", "corto/g"]
+        "use": ["corto", "corto.g"]
     }
 }
