@@ -2,7 +2,7 @@
 #ifndef CORTO_CDIFF_H
 #define CORTO_CDIFF_H
 
-#include <corto/corto.h>
+#include "prebaked.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,11 +27,11 @@ struct cdiff_file_s {
     char *name;
     bool isNew;
     bool isChanged;
-    corto_ll elements;
-    corto_ll legacyElements;
+    ut_ll elements;
+    ut_ll legacyElements;
     cdiff_elem *cur;
     int writeTo; /* 0 = nothing, 1 = header, 2 = body */
-    corto_buffer writeBuffer;
+    ut_strbuf writeBuffer;
     int indent;
     bool newLine; /* Is next write starting on new line */
 } cdiff_file_s;
@@ -54,7 +54,7 @@ void cdiff_file_write(
 
 void cdiff_file_writeBuffer(
     cdiff_file file,
-    corto_buffer *buffer);
+    ut_strbuf *buffer);
 
 void cdiff_file_indent(cdiff_file file);
 void cdiff_file_dedent(cdiff_file file);

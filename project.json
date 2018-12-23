@@ -7,7 +7,6 @@
         "repository": "https://github.com/cortoproject/cdiff",
         "license": "MIT",
         "description": "Perform in-code replacements of function implementations",
-        "managed": false,
         "use": ["corto", "corto.g"]
     }
 }

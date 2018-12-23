@@ -1,5 +1,5 @@
 
-#include <corto/util/cdiff/cdiff.h>
+#include <corto.util.cdiff>
 
 /* Optimistic parsing of C / C++ sourcefiles, extract function headers & bodies
  * so they can be replaced by updated definitions & new definitions can be added
@@ -7,7 +7,7 @@
 
 static
 void cdiff_addElem(
-    corto_ll elements,
+    ut_ll elements,
     char *id,
     char *header,
     char *body)
@@ -27,7 +27,7 @@ void cdiff_addElem(
     }
     elem->isNew = false;
 
-    corto_ll_append(elements, elem);
+    ut_ll_append(elements, elem);
 }
 
 static
@@ -121,7 +121,7 @@ char* cdiff_next(
 static
 char* cdiff_scanId(
     char *src,
-    corto_buffer *buffer,
+    ut_strbuf *buffer,
     char** t_start)
 {
     char ch, *ptr = cdiff_next(src, 0);
@@ -143,7 +143,7 @@ char* cdiff_scanId(
     }
 
     /* Add scanned characters to buffer */
-    corto_buffer_appendstrn(buffer, src, ptr - src);
+    ut_strbuf_appendstrn(buffer, src, ptr - src);
 
     return ptr;
 }
@@ -151,7 +151,7 @@ char* cdiff_scanId(
 static
 char* cdiff_scanExpect(
     char *src,
-    corto_buffer *buffer,
+    ut_strbuf *buffer,
     char match,
     char** t_start)
 {
@@ -166,7 +166,7 @@ char* cdiff_scanExpect(
     }
 
     /* Add scanned characters to buffer */
-    corto_buffer_appendstrn(buffer, src, ptr - src);
+    ut_strbuf_appendstrn(buffer, src, ptr - src);
 
     return ptr;
 }
@@ -174,7 +174,7 @@ char* cdiff_scanExpect(
 static
 char* cdiff_scanUntil(
     char *src,
-    corto_buffer *buffer,
+    ut_strbuf *buffer,
     char match,
     char** t_start)
 {
@@ -191,7 +191,7 @@ char* cdiff_scanUntil(
     }
 
     /* Add scanned characters to buffer */
-    corto_buffer_appendstrn(buffer, src, ptr - src);
+    ut_strbuf_appendstrn(buffer, src, ptr - src);
 
     return ptr;
 }
@@ -199,7 +199,7 @@ char* cdiff_scanUntil(
 static
 char *cdiff_skipExtern(
     char *ptr,
-    corto_buffer *header,
+    ut_strbuf *header,
     char **t_start)
 {
     /* Test if last parsed token was 'extern' */
@@ -228,7 +228,7 @@ char *cdiff_skipExtern(
                 if (!t_start) goto stop;
                 return ptr;
             } else {
-                corto_throw("missing language identifier for 'extern'");
+                ut_throw("missing language identifier for 'extern'");
                 goto stop;
             }
         } else {
@@ -248,8 +248,8 @@ static
 char *cdiff_parseFunction(
     char *src,
     char *id,
-    corto_buffer *header,
-    corto_buffer *body)
+    ut_strbuf *header,
+    ut_strbuf *body)
 {
     char *t_start;
 
@@ -289,8 +289,8 @@ char *cdiff_parseFunction(
     return ptr;
 stop:
     id[0] = '\0';
-    corto_buffer_reset(header);
-    corto_buffer_reset(body);
+    ut_strbuf_reset(header);
+    ut_strbuf_reset(body);
     return src;
 }
 
@@ -298,8 +298,8 @@ static
 char* cdiff_parseElem(
     char *src,
     char *id,
-    corto_buffer *header,
-    corto_buffer *body)
+    ut_strbuf *header,
+    ut_strbuf *body)
 {
     char ch, *ptr = src;
     id[0] = '\0';
@@ -314,30 +314,30 @@ char* cdiff_parseElem(
 
     /* Keep adding until newline is found */
     for (; (ch = *ptr) && (ch != '\n'); ptr++) {
-        corto_buffer_appendstrn(body, &ch, 1);
+        ut_strbuf_appendstrn(body, &ch, 1);
     }
-    if (ch) corto_buffer_appendstrn(body, &ch, 1);
+    if (ch) ut_strbuf_appendstrn(body, &ch, 1);
 
     return ch ? ptr + 1 : ptr;
 }
 
 static
-corto_ll cdiff_parse(char *src) {
-    corto_ll elements = corto_ll_new();
+ut_ll cdiff_parse(char *src) {
+    ut_ll elements = ut_ll_new();
     corto_id id;
     char *ptr = src;
 
-    corto_buffer header = CORTO_BUFFER_INIT, body = CORTO_BUFFER_INIT;
+    ut_strbuf header = UT_STRBUF_INIT, body = UT_STRBUF_INIT;
     id[0] = '\0';
 
     while ((ptr = cdiff_parseElem(ptr, id, &header, &body)) && *ptr) {
-        char *h = corto_buffer_str(&header);
-        char *b = corto_buffer_str(&body);
+        char *h = ut_strbuf_get(&header);
+        char *b = ut_strbuf_get(&body);
         cdiff_addElem(elements, id[0] ? strdup(id) : NULL, h, b);
     }
 
-    char *h = corto_buffer_str(&header);
-    char *b = corto_buffer_str(&body);
+    char *h = ut_strbuf_get(&header);
+    char *b = ut_strbuf_get(&body);
     cdiff_addElem(elements, id[0] ? strdup(id) : NULL, h, b);
 
     return elements;
@@ -345,9 +345,9 @@ corto_ll cdiff_parse(char *src) {
 
 /* Find existing parts in the code that must not be overwritten. */
 static
-corto_ll cdiff_parseLegacy(char *code) {
+ut_ll cdiff_parseLegacy(char *code) {
     char *ptr = NULL;
-    corto_ll result = corto_ll_new();
+    ut_ll result = ut_ll_new();
 
     ptr = code;
 
@@ -378,7 +378,7 @@ corto_ll cdiff_parseLegacy(char *code) {
                 endptr += 3;
 
                 if (strlen(ptr) >= sizeof(corto_id)) {
-                    corto_throw(
+                    ut_throw(
                         "%s: identifier of code-snippet exceeds %d characters", sizeof(corto_id));
                     goto error;
                 }
@@ -404,10 +404,10 @@ corto_ll cdiff_parseLegacy(char *code) {
                         endptr[1] = '\0';
                         endptr += 2;
                     }
-                    src = corto_strdup(ptr);
+                    src = ut_strdup(ptr);
 
                     if(strstr(src, "$begin")) {
-                        corto_throw("code-snippet '%s' contains nested $begin (did you forget an $end?)",
+                        ut_throw("code-snippet '%s' contains nested $begin (did you forget an $end?)",
                             identifier);
                         corto_dealloc(src);
                         goto error;
@@ -415,29 +415,29 @@ corto_ll cdiff_parseLegacy(char *code) {
 
                     el = corto_alloc(sizeof(cdiff_elem));
                     el->kind = kind;
-                    el->id = corto_strdup(identifier);
+                    el->id = ut_strdup(identifier);
                     el->header = NULL;
                     el->body = src;
                     el->isNew = false;
-                    corto_ll_append(result, el);
+                    ut_ll_append(result, el);
 
                     ptr = endptr + 1;
 
                 } else {
-                    corto_warning("generator: missing $end after $begin(%s)", identifier);
+                    ut_warning("generator: missing $end after $begin(%s)", identifier);
                 }
             } else {
-                corto_warning("generator: missing ')' after $begin/$header");
+                ut_warning("generator: missing ')' after $begin/$header");
             }
         } else {
-            corto_warning("generator: missing '(' after $begin/$header");
+            ut_warning("generator: missing '(' after $begin/$header");
         }
     }
 
     return result;
 error:
     if (result) {
-        corto_ll_free(result);
+        ut_ll_free(result);
     }
     return NULL;
 }
@@ -449,18 +449,18 @@ cdiff_file cdiff_file_open (
 
     /* Store current working directory in case the application using this
      * function changes the cwd before closing the file. */
-    result->name = corto_asprintf("%s/%s", corto_cwd(), filename);
+    result->name = ut_asprintf("%s/%s", ut_cwd(), filename);
 
     result->elements = NULL;
     result->legacyElements = NULL;
     result->isChanged = false;
-    result->writeBuffer = CORTO_BUFFER_INIT;
+    result->writeBuffer = UT_STRBUF_INIT;
     result->writeTo = 0;
     result->indent = 0;
     result->newLine = true;
     result->cur = NULL;
 
-    char *source = corto_file_load(result->name);
+    char *source = ut_file_load(result->name);
     if (source) {
         result->isNew = false;
 
@@ -488,7 +488,7 @@ cdiff_file cdiff_file_open (
         free(source);
 
     } else {
-        corto_catch();
+        ut_catch();
         result->isNew = true;
     }
 
@@ -505,7 +505,7 @@ void cdiff_file_writeElement(
     FILE *f,
     char *element)
 {
-    corto_assert(f != NULL, "NULL file passed to cdiff_file_writeElem");
+    ut_assert(f != NULL, "NULL file passed to cdiff_file_writeElem");
 
     fprintf(f, "%s", element);
     free(element);
@@ -514,14 +514,14 @@ void cdiff_file_writeElement(
 static
 void cdiff_file_writeElements(
     FILE *f,
-    corto_ll elements)
+    ut_ll elements)
 {
-    corto_assert(f != NULL, "NULL file passed to cdiff_file_writeElements");
+    ut_assert(f != NULL, "NULL file passed to cdiff_file_writeElements");
 
-    corto_iter it = corto_ll_iter(elements);
+    ut_iter it = ut_ll_iter(elements);
 
-    while (corto_iter_hasNext(&it)) {
-        cdiff_elem *el = corto_iter_next(&it);
+    while (ut_iter_hasNext(&it)) {
+        cdiff_elem *el = ut_iter_next(&it);
 
         if (el->header) {
             if (el->isNew && el->kind == CDIFF_FUNCTION) {
@@ -542,7 +542,7 @@ void cdiff_file_writeElements(
         free(el);
     }
 
-    corto_ll_free(elements);
+    ut_ll_free(elements);
 }
 
 int16_t cdiff_file_close (
@@ -553,7 +553,7 @@ int16_t cdiff_file_close (
         /* Open file for writing */
         FILE *f = fopen(file->name, "w");
         if (!f) {
-            corto_throw("cannot open file '%s'", file->name);
+            ut_throw("cannot open file '%s'", file->name);
             goto error;
         }
 
@@ -577,14 +577,14 @@ error:
 
 static
 cdiff_elem* cdiff_file_elemFind(
-    corto_ll elements,
+    ut_ll elements,
     char *id)
 {
-    corto_iter it = corto_ll_iter(elements);
+    ut_iter it = ut_ll_iter(elements);
     cdiff_elem *el = NULL;
 
-    while (corto_iter_hasNext(&it)) {
-        el = corto_iter_next(&it);
+    while (ut_iter_hasNext(&it)) {
+        el = ut_iter_next(&it);
 
         if (el->id) {
             if (el->kind == CDIFF_FUNCTION_LEGACY) {
@@ -659,10 +659,10 @@ void cdiff_file_elemBegin(
     cdiff_file file,
     char *fmt, ...)
 {
-    corto_assert(file != NULL, "NULL specified for file");
+    ut_assert(file != NULL, "NULL specified for file");
 
     if (!file->elements) {
-        file->elements = corto_ll_new();
+        file->elements = ut_ll_new();
     }
 
     cdiff_elem *el = NULL;
@@ -671,7 +671,7 @@ void cdiff_file_elemBegin(
     if (fmt) {
         va_list args;
         va_start(args, fmt);
-        id = corto_vasprintf(fmt, args);
+        id = ut_vasprintf(fmt, args);
         va_end(args);
 
         el = cdiff_file_elemFind(file->elements, id);
@@ -690,9 +690,9 @@ void cdiff_file_elemBegin(
         file->isChanged = true;
 
         if (!file->elements) {
-            file->elements = corto_ll_new();
+            file->elements = ut_ll_new();
         }
-        corto_ll_append(file->elements, el);
+        ut_ll_append(file->elements, el);
     } else {
         free(id);
     }
@@ -704,29 +704,29 @@ void cdiff_file_elemBegin(
 void cdiff_file_elemEnd(
     cdiff_file file)
 {
-    corto_assert(file != NULL, "NULL specified for file");
-    corto_assert(file->writeTo == 0, "finish header or body before closing element");
+    ut_assert(file != NULL, "NULL specified for file");
+    ut_assert(file->writeTo == 0, "finish header or body before closing element");
     file->cur = NULL;
 }
 
 void cdiff_file_headerBegin(
     cdiff_file file)
 {
-    corto_assert(file != NULL, "NULL specified for file");
-    corto_assert(file->cur != NULL, "select element before starting header");
-    corto_assert(file->writeTo != 2, "end body before start writing to header");
+    ut_assert(file != NULL, "NULL specified for file");
+    ut_assert(file->cur != NULL, "select element before starting header");
+    ut_assert(file->writeTo != 2, "end body before start writing to header");
 
     file->writeTo = 1;
-    file->writeBuffer = CORTO_BUFFER_INIT;
+    file->writeBuffer = UT_STRBUF_INIT;
 }
 
 void cdiff_file_headerEnd(
     cdiff_file file)
 {
-    corto_assert(file != NULL, "NULL specified for file");
-    corto_assert(file->writeTo == 1, "not writing to header");
+    ut_assert(file != NULL, "NULL specified for file");
+    ut_assert(file->writeTo == 1, "not writing to header");
 
-    char *header = corto_buffer_str(&file->writeBuffer);
+    char *header = ut_strbuf_get(&file->writeBuffer);
     if (!file->cur->header) {
         file->cur->header = header;
     } else if (strcmp(header, file->cur->header)) {
@@ -740,16 +740,16 @@ void cdiff_file_headerEnd(
 int16_t cdiff_file_bodyBegin(
     cdiff_file file)
 {
-    corto_assert(file != NULL, "NULL specified for file");
-    corto_assert(file->cur != NULL, "select element before starting body");
-    corto_assert(file->writeTo != 1, "end header before start writing to body");
+    ut_assert(file != NULL, "NULL specified for file");
+    ut_assert(file->cur != NULL, "select element before starting body");
+    ut_assert(file->writeTo != 1, "end header before start writing to body");
 
     /* Test if body is already set */
     if (file->cur->body) {
         return 1;
     }
 
-    file->writeBuffer = CORTO_BUFFER_INIT;
+    file->writeBuffer = UT_STRBUF_INIT;
     file->writeTo = 2;
 
     return 0;
@@ -758,10 +758,10 @@ int16_t cdiff_file_bodyBegin(
 void cdiff_file_bodyEnd(
     cdiff_file file)
 {
-    corto_assert(file != NULL, "NULL specified for file");
-    corto_assert(file->writeTo == 2, "not writing to body");
+    ut_assert(file != NULL, "NULL specified for file");
+    ut_assert(file->writeTo == 2, "not writing to body");
 
-    file->cur->body = corto_buffer_str(&file->writeBuffer);
+    file->cur->body = ut_strbuf_get(&file->writeBuffer);
 
     file->writeTo = 0;
     file->isChanged = TRUE;
@@ -772,30 +772,30 @@ void cdiff_file_write(
     char *fmt,
     ...)
 {
-    corto_assert(file != NULL, "NULL specified for file");
+    ut_assert(file != NULL, "NULL specified for file");
 
     if (file->newLine && file->indent) {
         int i;
         for (i = 0; i < file->indent * 4; i++) {
-            corto_buffer_appendstrn(&file->writeBuffer, " ", 1);
+            ut_strbuf_appendstrn(&file->writeBuffer, " ", 1);
         }
     }
 
     va_list args;
     va_start(args, fmt);
-    corto_buffer_vappend(&file->writeBuffer, fmt, args);
+    ut_strbuf_vappend(&file->writeBuffer, fmt, args);
     va_end(args);
 
     /* If no element specified for writing, write to new text element. */
     if (!file->cur && file->isNew) {
         cdiff_elem *el = corto_calloc(sizeof(cdiff_elem));
         el->kind = CDIFF_TEXT;
-        el->body = corto_buffer_str(&file->writeBuffer);
+        el->body = ut_strbuf_get(&file->writeBuffer);
         if (!file->elements) {
-            file->elements = corto_ll_new();
+            file->elements = ut_ll_new();
         }
-        corto_ll_append(file->elements, el);
-        file->writeBuffer = CORTO_BUFFER_INIT;
+        ut_ll_append(file->elements, el);
+        file->writeBuffer = UT_STRBUF_INIT;
     }
 
     file->newLine = fmt[strlen(fmt) - 1] == '\n';
@@ -803,9 +803,9 @@ void cdiff_file_write(
 
 void cdiff_file_writeBuffer(
     cdiff_file file,
-    corto_buffer *buffer)
+    ut_strbuf *buffer)
 {
-    char *str = corto_buffer_str(buffer);
+    char *str = ut_strbuf_get(buffer);
     cdiff_file_write(file, "%s", str);
     free(str);
 }
@@ -813,15 +813,15 @@ void cdiff_file_writeBuffer(
 void cdiff_file_indent(
     cdiff_file file)
 {
-    corto_assert(file != NULL, "NULL specified for file");
+    ut_assert(file != NULL, "NULL specified for file");
     file->indent ++;
 }
 
 void cdiff_file_dedent(
     cdiff_file file)
 {
-    corto_assert(file != NULL, "NULL specified for file");
-    corto_assert(file->indent != 0, "too many dedents");
+    ut_assert(file != NULL, "NULL specified for file");
+    ut_assert(file->indent != 0, "too many dedents");
     file->indent --;
 }
 
