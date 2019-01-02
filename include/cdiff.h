@@ -2,7 +2,7 @@
 #ifndef CORTO_CDIFF_H
 #define CORTO_CDIFF_H
 
-#include "prebaked.h"
+#include "bake_config.h"
 
 #ifdef __cplusplus
 extern "C" {
